@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <iostream>
 #include <vector>
@@ -5,7 +6,7 @@
 
 using namespace cv;
 using namespace std;
-#include "round_target.h"
+#include "point_detector.h"
 
 #define  _DEBUG_H_
 
@@ -43,7 +44,7 @@ static bool _isRound(vector<Point> &contour)
 	}
 }
 
-static void  _inRangeS(Mat& img, int min, int max)
+static void  _inHandleHChannel(Mat& img, int middle)
 {
 	// accept only char type matrices
 	CV_Assert(img.depth() == CV_8U);
@@ -53,27 +54,66 @@ static void  _inRangeS(Mat& img, int min, int max)
 	MatIterator_<uchar> it, end;
 	for (it = img.begin<uchar>(), end = img.end<uchar>(); it != end; ++it) {
 		data = *it;
-		if (data > min && data <= max) {
-			*it = 255;
+		
+		//计算差值
+		if (data > middle){
+			data = data - middle;
+		} else {
+			data = middle - data;
 		}
-		else {
-			*it = 0;
+
+		//由于颜色是环状的，计算实际的距离
+		if (data > 90){
+			data = 180 - data;
 		}
+
+		//将距离的值反向
+		data = 90 - data;
+
+		//归一
+		data = (uint8_t)(((uint32_t)data * 85UL) / 90UL);
+		*it = data;
 	}
 
 	return;
 }
 
-int RoundTarget::Detect(Mat &img)
+static void  _insNormalizeChannel(Mat& img, int max)
+{
+	// accept only char type matrices
+	CV_Assert(img.depth() == CV_8U);
+	CV_Assert(img.channels() == 1);
+	uint8_t data;
+
+	MatIterator_<uchar> it, end;
+	for (it = img.begin<uchar>(), end = img.end<uchar>(); it != end; ++it) {
+		data = *it;
+
+		//归一
+		data = (uint8_t)(((uint32_t)data * max) / 255UL);
+		*it = data;
+	}
+
+	return;
+}
+
+/*
+	1、高斯模糊
+	2、拆分HSV通道
+	3、判断三个通道的数值范围选出图像进行与操作
+	4、腐蚀掉小范围的区域，
+	5、估计剩余为圆形的区域
+*/
+int PointDetector::Detect(Mat &src, vector<Point2d> &points)
 {
 	Mat temp;
 	Mat kernel;
 	Mat h,s,v;
 	vector<Mat> channels;
-	vector<vector<Point>> contours;
+	vector<vector<Point> > contours;
 
 	//1、高斯模糊
-	GaussianBlur(img, temp, Size(7, 7), 0, 0);
+	GaussianBlur(src, temp, Size(7, 7), 0, 0);
 
 	//2、拆分HSV通道
 	cvtColor(temp, temp, COLOR_BGR2HSV);
@@ -86,7 +126,7 @@ int RoundTarget::Detect(Mat &img)
 	g_h = h;
 	g_s = s;
 	g_v = v;
-	imshow("origin", img);
+	imshow("origin", src);
 	imshow("h", h);
 	imshow("s", s);
 	imshow("v", v);
@@ -95,19 +135,17 @@ int RoundTarget::Detect(Mat &img)
 #endif
 
 	//三通道分别进行阈值化
-	//20-60
-	_inRangeS(h, 30, 70);
-	//threshold(h, h, 167, 255, THRESH_BINARY);
-	threshold(s, s, 40, 255, THRESH_BINARY);
-	threshold(v, v, 220, 255, THRESH_BINARY);
+	_inHandleHChannel(h, 172);
+	_insNormalizeChannel(s, 85);
+	_insNormalizeChannel(v, 85);
 	
-	bitwise_and(h, s, temp);
-	bitwise_and(v, temp, temp);
+	add(h, s, temp);
+	add(v, temp, temp);
 
 	//形态学
-	kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
-	morphologyEx(temp, temp, MORPH_CLOSE, kernel);
-	morphologyEx(temp, temp, MORPH_OPEN, kernel);
+	//kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
+	//morphologyEx(temp, temp, MORPH_CLOSE, kernel);
+	//morphologyEx(temp, temp, MORPH_OPEN, kernel);
 
 #ifdef _DEBUG_H_
 	imshow("h_thresh", h);
@@ -119,9 +157,6 @@ int RoundTarget::Detect(Mat &img)
 
 	//查找边缘
 	findContours(temp, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-	//计算平均面积，按照面积进行筛选
-	//匹配形状，根据形状进行筛选
 
 	//遍历边缘
 	for (int i = 0; i < contours.size(); ++i){
@@ -137,8 +172,13 @@ int RoundTarget::Detect(Mat &img)
 
 		//画出所选区域
  		//drawContours(src, contours, i, Scalar(0, 255, 0));
+
+		//计算光点位置
+		m = moments(contours[i], true);
+		point.x = m.m10/m.m00;
+		point.y = m.m01/m.m00;
+		points.push_back(point);
 	}
 
-	return -1;
+	return points.size();
 }
-

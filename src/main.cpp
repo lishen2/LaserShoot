@@ -38,7 +38,7 @@ void test_target(Mat &origin)
 	waitKey();
 }
 
-int main(void)
+int main1(void)
 {
 	Mat origin;
 	int key;
@@ -60,7 +60,7 @@ int main(void)
 	return 0;
 }
 
-int main1(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
 	Mat origin;
 
