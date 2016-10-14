@@ -8,7 +8,7 @@ using namespace cv;
 using namespace std;
 #include "point_detector.h"
 
-//#define  _DEBUG_H_
+#define  _DEBUG_H_
 
 #ifdef _DEBUG_H_
 Mat g_h;
@@ -77,7 +77,7 @@ int PointDetector::Detect(Mat &src, vector<Point2d> &points)
 	imshow("h", h);
 	imshow("s", s);
 	imshow("v", v);
-	setMouseCallback("origin", _mouseCallback, &ud);
+	setMouseCallback("origin", _mouseCallback, NULL);
 	waitKey();
 #endif
 

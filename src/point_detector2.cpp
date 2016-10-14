@@ -44,7 +44,7 @@ static bool _isRound(vector<Point> &contour)
 	}
 }
 
-static void  _inHandleHChannel(Mat& img, int middle)
+static void  _inHandleHChannel(Mat& img, int middle, int max)
 {
 	// accept only char type matrices
 	CV_Assert(img.depth() == CV_8U);
@@ -71,7 +71,7 @@ static void  _inHandleHChannel(Mat& img, int middle)
 		data = 90 - data;
 
 		//归一
-		data = (uint8_t)(((uint32_t)data * 85UL) / 90UL);
+		data = (uint8_t)(((uint32_t)data * max) / 90UL);
 		*it = data;
 	}
 
@@ -135,12 +135,13 @@ int PointDetector::Detect(Mat &src, vector<Point2d> &points)
 #endif
 
 	//三通道分别进行阈值化
-	_inHandleHChannel(h, 172);
-	_insNormalizeChannel(s, 85);
-	_insNormalizeChannel(v, 85);
+	_inHandleHChannel(h, 179, 127);
+	//_insNormalizeChannel(s, 85);
+	_insNormalizeChannel(v, 127);
 	
-	add(h, s, temp);
-	add(v, temp, temp);
+	//add(h, s, temp);
+	//add(v, temp, temp);
+	add(h, v, temp);
 
 	//形态学
 	//kernel = getStructuringElement(MORPH_RECT, Size(3, 3));

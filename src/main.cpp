@@ -14,18 +14,18 @@ void test_point(Mat &origin)
 	PointDetector pd;
 
 	//检测点
-	pd.Detect(origin, points);
+ 	pd.Detect(origin, points);
 
 	//遍历边缘
-	//for (int i = 0; i < points.size(); ++i){
+	for (int i = 0; i < points.size(); ++i){
 
 		//画出所选区域
-		//cv::circle(origin, points[i], 5, Scalar(0, 255, 0));
-	//}
+		cv::circle(origin, points[i], 5, Scalar(0, 255, 0));
+	}
 
 	imshow("origin", origin);
 
-	//waitKey(); 
+	waitKey(); 
 }
 
 void test_target(Mat &origin)
@@ -38,13 +38,11 @@ void test_target(Mat &origin)
 	waitKey();
 }
 
-int main(void)
+int main1(void)
 {
 	Mat origin;
 	int key;
 	VideoCapture capture(0);
-	stringstream savename;
-	int index;
 
 	if (false == capture.isOpened()) {
 		cerr << "can open capture device.\n" << endl;
@@ -52,23 +50,17 @@ int main(void)
 	}
 
 	key = 0;
-	index = 0;
 	while ('q' != key) {
 		capture >> origin;
-		key = waitKey(1);
-		if ('s' == key) {
-			stringstream savename;
-			savename << "snap" << index << ".png";
-			index += 1;
-			imwrite(savename.str(), origin);
-		}
 		test_point(origin);
+
+		key = waitKey(1);
 	}
 
 	return 0;
 }
 
-int main1(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
 	Mat origin;
 
